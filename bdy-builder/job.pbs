@@ -1,0 +1,10 @@
+#!/bin/sh
+
+#PBS -N bdy-GOM36
+#PBS -l nodes=1:ppn=28
+#PBS -q memsup
+
+cd $PBS_O_WORKDIR
+module load anaconda-python-2.7
+python bdy_build_golfo36.py
+

@@ -1,0 +1,3 @@
+/LUSTRE/jouanno/FORCING/GOLFO36-NAS-I/mesh_mask.nc
+/LUSTRE/jouanno/FORCING/GOLFO36-NAS-I/BDY_GLORYS12_RIM1/coordinates.bdy_GOLFO36.nc
+
