@@ -8,13 +8,13 @@ from timeit import default_timer as clock
 
 def main():
 
-    # 
+    #
     log.getLogger().setLevel( log.DEBUG )
 
-    # 
+    #
     gridTUV_nc = MFDataset('../sample-data/mercator-data/GLOBAL_ANALYSIS_FORECAST_PHYS_001_024-TDS_2021*.nc')
     meshmask_ncpath       = '../sample-data/mesh_mask.nc'
-    bdycoordinates_ncpath = '../sample-data/coordinates.bdy_GOLFO36.nc'    
+    bdycoordinates_ncpath = '../sample-data/coordinates.bdy_GOLFO36.nc'
 
     #
     coords = {}

@@ -1,14 +1,12 @@
 """
  Script para generar fronteras en el formato sin estructura BDY.
- Codigo por Julien Jouano
- Adaptado Favio Medrano, 
-   Requiere python 2.7 numpy v.
+ Codigo por Julien Jouano, adaptado Favio Medrano,
 """
 
 import sys, os
 import gc
 from netCDF4 import Dataset as netcdf
-from netCDF4 import num2date 
+from netCDF4 import num2date
 from netCDF4 import MFDataset
 import numpy as np
 from scipy import interpolate
@@ -37,9 +35,9 @@ def interp2d(x,y,z,xi,yi,method='linear'):
 def horizInterp(in_q, out_q):
     """
      Metodo horizInterp(worker) para mandarlo al pool del multiproceso.
-    """  
+    """
     lons = in_q.get()
-    lats = in_q.get() 
+    lats = in_q.get()
     buf = in_q.get()
     lons_1 = in_q.get()
     lats_1 = in_q.get()
@@ -47,15 +45,15 @@ def horizInterp(in_q, out_q):
     methodI = in_q.get()
     dataOut = {}
 
-    buf2 = interp2d(lons,lats,buf[:,:],lons,lats,method='nearest')        
+    buf2 = interp2d(lons,lats,buf[:,:],lons,lats,method='nearest')
     dataOut[iz] = interp2d(lons,lats,buf2[:,:],lons_1,lats_1,method=methodI)
     out_q.put(dataOut)
 
 # Thread worker
 def horizInterp_worker(lons,lats,buf,lons_1,lats_1, imethod, results, idx):
     timer01 = clock()
-    buf2 = interp2d(lons,lats,buf[:,:],lons,lats,method='nearest')        
-    results[idx] = interp2d(lons,lats,buf2[:,:],lons_1,lats_1,method=imethod) 
+    buf2 = interp2d(lons,lats,buf[:,:],lons,lats,method='nearest')
+    results[idx] = interp2d(lons,lats,buf2[:,:],lons_1,lats_1,method=imethod)
     log.debug('horizInterp method : ' + imethod + ' - index : ' + str(idx) + '  - took ' + str(clock() - timer01) + ' secs')
 
 # Testing method
@@ -76,19 +74,19 @@ def interp3d(x,y,z,data,xi,yi,zi,method='linear'):
 
 class bdy_create():
     """
-     Clase para crear archivos BDY para simulaciones de nemo-opa. 
+     Clase para crear archivos BDY para simulaciones de nemo-opa.
      Ejecutandose normalmente el metodo make_bdy_files() genera los siguientes archivos:
       bdyU_u3d_$EXPNAME_y$YEAR.nc : Datos en formato BDY de vozocrtx (3D)
       bdyU_u2d_$EXPNAME_y$YEAR.nc : Datos en formato BDY de vozocrtx (2D) barotropicos
       bdyV_u3d_$EXPNAME_y$YEAR.nc : Datos en formato BDY de vomecrty (3D)
       bdyV_u2d_$EXPNAME_y$YEAR.nc : Datos en formato BDY de vomecrty (2D) barotropicos
-      bdyT_u2d_$EXPNAME_y$YEAR.nc : Datos en formato BDY para sossheig 
+      bdyT_u2d_$EXPNAME_y$YEAR.nc : Datos en formato BDY para sossheig
       bdyT_tra_$EXPNAME_y$YEAR.nc : Datos en formato BDY para tracers votemper y vosaline (3D)
 
      Como archivos de entrada requiere.
       coordinates.bdy_$EXPNAME.nc : Archivo con el listado de puntos para usar como frontera.
-      mesh_mask_$EXPNAME.nc       : Archivo con la mascara de la conf EXPNAME 
-      dataEntry.nc                : Datos de entrada con votemper, vosaline, ssh, vozocrtx y vomecrty  
+      mesh_mask_$EXPNAME.nc       : Archivo con la mascara de la conf EXPNAME
+      dataEntry.nc                : Datos de entrada con votemper, vosaline, ssh, vozocrtx y vomecrty
     """
 
     # --------------------
@@ -107,48 +105,48 @@ class bdy_create():
     ncdataT = None
     ncdataU = None
     ncdataV = None
-    ncmask  = None 
-    nccoord = None 
+    ncmask  = None
+    nccoord = None
 
     # --------------------
     # File output params
     # --------------------
-    par_Ttra = None 
-    par_Uu3d = None 
-    par_Vu3d = None 
-    par_Uu2d = None 
-    par_Vu2d = None 
-    par_Tu2d = None 
+    par_Ttra = None
+    par_Uu3d = None
+    par_Vu3d = None
+    par_Uu2d = None
+    par_Vu2d = None
+    par_Tu2d = None
 
     # Frecuency of data, in hours
-    data_frecuency = 24.0 
+    data_frecuency = 24.0
 
     deltaDays = 0
     calendar_type = 'noleap'
 
 
     def __init__(self, coords, varTemp, varSal, varSSH, varU, varV, meshmask, bdyCoor, **kwargs):
-        """ 
+        """
          Recibe como parametros las variables de temperatura, salinidad, nivel del mar
          y componentes de velocidad U y V.
          Acompanado de variables de coordenadas para estas variables:
-          coords[time] 
+          coords[time]
           coords[longitude] 1D or 2D
-          coords[latitude] 1D or 2D          
-          coords[depth]           
+          coords[latitude] 1D or 2D
+          coords[depth]
         """
         self.i_coords = coords
-        self.i_varTemp = varTemp 
+        self.i_varTemp = varTemp
         self.i_varSal = varSal
         self.i_varSSH = varSSH
-        self.i_varU = varU 
-        self.i_varV = varV 
+        self.i_varU = varU
+        self.i_varV = varV
 
         self.ncmask = netcdf(meshmask,'r') if os.path.exists(meshmask) else None
         self.nccoord = netcdf(bdyCoor,'r') if os.path.exists(bdyCoor) else None
 
         outDir = kwargs.get('BDYDIR','./')
-        sExpName = kwargs.get('EXPNAME','EXPNAME')          
+        sExpName = kwargs.get('EXPNAME','EXPNAME')
 
         if self.ncmask == None or self.nccoord == None:
             log.error('Mask file or bdy coordinates file doesnt exists ')
@@ -161,20 +159,20 @@ class bdy_create():
 
 
     def dateToNemoCalendar(self, data, ctype='gregorian',give='full'):
-        """ 
+        """
          Codigo tomado del codigo de nemo IOIPSL/src/calendar.f90 para construir el valor de la variable temporal en modo ordinal.
          segun el calendario con que se prepare la configuracion de nemo. Estos pueden ser:
           gregorian, noleap, all_leap, 360_day, julian
 
          El parametro 'give' se utiliza para escojer el valor que regresa la funcion:
           full (default) : Regresa el valor ordinal al que corresponde la fecha 'data' (datetime) segun
-                           el calendario quese haya seleccionado en 'ctype' 
+                           el calendario quese haya seleccionado en 'ctype'
           monthLen       : Regresa los dias que tiene el mes contenido en la fecha 'data' (datetime), segun
                            el calendario que se haya seleccionado en 'ctype'
           yearLen        : Regresa los dias que contiene el ano, segun el calendario que se haya seleccionado
                            en 'ctype'
 
-         Se utiliza como fecha epoch 1-1-1950 
+         Se utiliza como fecha epoch 1-1-1950
         """
         epochy = 1950
         epochm = 1
@@ -183,39 +181,39 @@ class bdy_create():
             oneyear = 365.2425
             ml = np.array([31,28,31,30,31,30,31,31,30,31,30,31])
         elif ctype == 'noleap':
-            oneyear = 365 
+            oneyear = 365
             ml = np.array([31,28,31,30,31,30,31,31,30,31,30,31])
         elif ctype == 'all_leap': # 366_day
             oneyear = 366.0
             ml = np.array([31,29,31,30,31,30,31,31,30,31,30,31])
         elif ctype == '360_day':
-            oneyear = 360.0 
+            oneyear = 360.0
             ml = np.array([30,30,30,30,30,30,30,30,30,30,30,30])
         elif ctype == 'julian':
             oneyear = 365.25
             ml = np.array([31,28,31,30,31,30,31,31,30,31,30,31])
-        
+
         if give == 'yearLen':
             return oneyear
 
         if give == 'monthLen':
-            return ml[data.month -1] 
+            return ml[data.month -1]
 
         if (not isinstance(data,np.ndarray)):
             data = np.array([data])
 
         newc = np.zeros((len(data)),float)
         for idx,v in enumerate(data):
-            y = v.year 
+            y = v.year
             m = v.month - 1
-            d = (v.day-1) + (v.hour / 24.0) 
-            nnumdate = (y - epochy) * oneyear 
+            d = (v.day-1) + (v.hour / 24.0)
+            nnumdate = (y - epochy) * oneyear
             for nm in range(0,m):
                 nnumdate = nnumdate + (ml[nm])
-            nnumdate = nnumdate + d 
-            newc[idx] = nnumdate 
+            nnumdate = nnumdate + d
+            newc[idx] = nnumdate
 
-        return np.squeeze(newc)    
+        return np.squeeze(newc)
 
 
     def setFileParams(self,sBDYdir,sExpName,sYear):
@@ -223,11 +221,11 @@ class bdy_create():
          Metodo interno para definir los archivos de salida BDY.
          sBDYdir  : Ruta de salida de los archivos
          sExpName : Nombre de la configuracion
-         sYear    : Ano de los datos 
-         Con estos datos se construye el sufijo de los archivos: _$sExpName_y$sYear.nc 
+         sYear    : Ano de los datos
+         Con estos datos se construye el sufijo de los archivos: _$sExpName_y$sYear.nc
         """
         #
-        # Generate the custom time_counter variable, according to the frecuency of data self.data_frecuency 
+        # Generate the custom time_counter variable, according to the frecuency of data self.data_frecuency
         yearLen = self.dateToNemoCalendar(None,self.calendar_type,'yearLen')
         time_counter_lenght = int(yearLen / (self.data_frecuency/24))
         self.deltaDays =  yearLen / time_counter_lenght
@@ -251,7 +249,7 @@ class bdy_create():
                      "time_counter":time_counter_custom,\
                      "depth":self.i_coords['depth'],\
                      "depth_1":self.ncmask.variables['gdept_1d'],\
-                     "nt":time_counter_lenght } #len(self.ncdataT.variables['time_counter'][:])} 
+                     "nt":time_counter_lenght } #len(self.ncdataT.variables['time_counter'][:])}
 
         self.par_Uu3d={"ncname":sBDYdir+'bdyU_u3d_'+sExpName+'_y'+sYear+'.nc',\
                      "dtype":'3d',\
@@ -308,18 +306,18 @@ class bdy_create():
 
     def create_bdy_file(self,par):
         """
-         Metodo interno para generar el archivo bdy descrito en el 
-         diccionario 'par'. 
+         Metodo interno para generar el archivo bdy descrito en el
+         diccionario 'par'.
         """
         # Netcdf file function
-        ncbdy=netcdf(par['ncname'],'w')  
+        ncbdy=netcdf(par['ncname'],'w')
         #
         ncbdy.createDimension(par['xb'],par['xb_val'])
         ncbdy.createDimension('y',1)
         ndep = len(self.ncmask.dimensions['z'])
         ncbdy.createDimension(par['depthname'],ndep)
         ncbdy.createDimension('time_counter',None)
-        #    
+        #
         cdfnbidta=ncbdy.createVariable('nbidta','i',('y',par['xb']))
         cdfnbjdta=ncbdy.createVariable('nbjdta','i',('y',par['xb']))
         cdfnbrdta=ncbdy.createVariable('nbrdta','i',('y',par['xb']))
@@ -346,15 +344,15 @@ class bdy_create():
             cdflat[0,i]=par['nav_lat'][0,ji,ii]
             cdftimecounter[:]=par['time_counter']
 
-        if par['dtype']=='3d':  
+        if par['dtype']=='3d':
             cdfdepth[:]=par['depth_1'][0,:]
         #
-        ncbdy.close()  
+        ncbdy.close()
 
 
     def make_bdy_files(self, testRun=False):
         """
-         Metodo para mandar la orden de generar archivos BDY, con lo configurado 
+         Metodo para mandar la orden de generar archivos BDY, con lo configurado
          previamente.
           testRun : Si se activa (True) , solo genera archivos tracers y el primer paso de tiempo
 
@@ -367,8 +365,8 @@ class bdy_create():
         log.info('inputdata : longitude shape: ' + str( self.i_coords['longitude'].shape ))
         log.info('inputdata : latitude shape: ' + str( self.i_coords['latitude'].shape ))
 
-        log.info('longitude number dimensions : ' + str(self.i_coords['longitude'].ndim) )  
-        if self.i_coords['longitude'].ndim == 2: 
+        log.info('longitude number dimensions : ' + str(self.i_coords['longitude'].ndim) )
+        if self.i_coords['longitude'].ndim == 2:
             LON = self.i_coords['longitude'][:,:]
             LAT = self.i_coords['latitude'][:,:]
         else:
@@ -379,11 +377,11 @@ class bdy_create():
 
         lonmin=lon.min();lonmax=lon.max()
         latmin=lat.min();latmax=lat.max()
-    
 
-        NJ,NI=LON.shape        
-        JMIN,IMIN=np.unravel_index(np.argmin(np.abs(LON-lonmin)+np.abs(LAT-latmin)),(NJ,NI)) 
-        JMAX,IMAX=np.unravel_index(np.argmin(np.abs(LON-lonmax)+np.abs(LAT-latmax)),(NJ,NI)) 
+
+        NJ,NI=LON.shape
+        JMIN,IMIN=np.unravel_index(np.argmin(np.abs(LON-lonmin)+np.abs(LAT-latmin)),(NJ,NI))
+        JMAX,IMAX=np.unravel_index(np.argmin(np.abs(LON-lonmax)+np.abs(LAT-latmax)),(NJ,NI))
 
         IMIN-=0;JMIN-=0
         JMAX+=2;IMAX+=2
@@ -398,11 +396,11 @@ class bdy_create():
         else:
             parList = [self.par_Ttra,self.par_Uu3d,self.par_Vu3d,self.par_Tu2d]
 
-        # Build dynamic file   
+        # Build dynamic file
         for par in parList:
             #
             # Create netcdf files
-            #  
+            #
             self.create_bdy_file(par)
             if par==self.par_Uu3d: self.create_bdy_file(self.par_Uu2d)
             if par==self.par_Vu3d: self.create_bdy_file(self.par_Vu2d)
@@ -413,7 +411,7 @@ class bdy_create():
             # Assume that all variables have the same temporal dimension size.
             nt=self.i_coords['time'][:].size # par['nt']  # Temporal dimension size
 
-            #if testRun: nt = 1 
+            #if testRun: nt = 1
 
             depth=par['depth'][:]
             nz=len(depth)
@@ -447,7 +445,7 @@ class bdy_create():
                 ncbdy=netcdf(par['ncname'],'a')
                 for it in range(nt-1,-1,-int(self.deltaDays)):
                     log.info('Time frame from source :'+str(it))
-                    #    
+                    #
                     # Init
                     #
                     data=np.zeros((nz,xb))
@@ -455,12 +453,12 @@ class bdy_create():
                     if par==self.par_Uu3d or par==self.par_Vu3d: data2d_1=np.zeros((xb))
                     #
                     # Read
-                    #                                
+                    #
                     if var in ['votemper']:
-                        # tmp=self.ncdataT.variables['temperature'][it,:,JMIN:JMAX,IMIN:IMAX] - 272.15  # Convert kelvin to celsius                               
-                        tmp=self.i_varTemp[it,:,JMIN:JMAX,IMIN:IMAX] 
+                        # tmp=self.ncdataT.variables['temperature'][it,:,JMIN:JMAX,IMIN:IMAX] - 272.15  # Convert kelvin to celsius
+                        tmp=self.i_varTemp[it,:,JMIN:JMAX,IMIN:IMAX]
                     elif var in ['vosaline']:
-                        tmp=self.i_varSal[it,:,JMIN:JMAX,IMIN:IMAX]               
+                        tmp=self.i_varSal[it,:,JMIN:JMAX,IMIN:IMAX]
                     elif var in ['vozocrtx']:
                         tmp=self.i_varU[it,:,JMIN:JMAX,IMIN:IMAX]
                     elif var in ['vomecrty']:
@@ -471,33 +469,33 @@ class bdy_create():
                     #
                     # Interp horiz
                     #
-                    # Multiprocesing support 
-                    timer01 = clock() 
+                    # Multiprocesing support
+                    timer01 = clock()
                     #
 
                     nanIdx = []
-                    # Threading support 
+                    # Threading support
                     nthreads = 0
                     threads = [None] * nz
                     hinterp_results = [None] * nz
                     buft = np.zeros_like(tmp)
                     for iz in range(nz):
                         #buf=tmp[iz,:,:]
-                        #buf[buf==0]=np.NaN 
-                        buft[iz,:,:] = tmp[iz,:,:] 
+                        #buf[buf==0]=np.NaN
+                        buft[iz,:,:] = tmp[iz,:,:]
                         buft[iz, buft[iz]==0 ] = np.NaN
-                        #if np.all(np.isnan(buf)):    
+                        #if np.all(np.isnan(buf)):
                         if np.all(np.isnan(buft[iz])):
                             nanIdx.append(iz)
                             #data[iz,:]=data[iz-1,:]
                         else:
 
                             # Thread
-                            if (var == 'votemper' or var == 'vosaline'):                                
+                            if (var == 'votemper' or var == 'vosaline'):
                                 #t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buf[:,:],lons_1,lats_1,'cubic' ,hinterp_results,iz))
-                                #t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'cubic' ,hinterp_results,iz))  
-                                t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'nearest' ,hinterp_results,iz))  
-                            else:                                
+                                #t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'cubic' ,hinterp_results,iz))
+                                t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'nearest' ,hinterp_results,iz))
+                            else:
                                 #t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buf[:,:],lons_1,lats_1,'linear',hinterp_results,iz))
                                 #t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'linear',hinterp_results,iz))
                                 t = threading.Thread(target=horizInterp_worker,args=(lons,lats,buft[iz,:,:],lons_1,lats_1,'nearest',hinterp_results,iz))
@@ -508,7 +506,7 @@ class bdy_create():
                     # Start threads
                     for iz in range(nz):
                         if threads[iz] != None:
-                            threads[iz].start()   
+                            threads[iz].start()
 
                     # Threading join
                     for i in range(len(threads)):
@@ -519,10 +517,10 @@ class bdy_create():
                     # Get the data from the interpolation threads, and write nan records after getting the data.
                     for tn in range(len(hinterp_results)):
                         if threads[tn] != None:
-                            data[tn,:] = hinterp_results[tn] 
+                            data[tn,:] = hinterp_results[tn]
                     for v in nanIdx:
                         data[v,:] = data[v-1,:]
-                    
+
                     log.debug('Number of threads : ' + str(nthreads) + ' -  Horizontal interpol took : ' + str(clock() - timer01)  + ' secs' )
 
                     if nz > 1:
@@ -552,16 +550,16 @@ class bdy_create():
                             ji=par['ji'][i]
                             data2d_1[i]=np.sum(data_1[:,i] * e3_1[:,ji,ii] ,0)\
                                      /np.sum(e3_1[:,ji,ii] * mask_1[:,ji,ii])
-                            data_1[:,i]=(data_1[:,i]-data2d_1[np.newaxis,i])*mask_1[:,ji,ii] 
+                            data_1[:,i]=(data_1[:,i]-data2d_1[np.newaxis,i])*mask_1[:,ji,ii]
 
                     # Find index of the time_counter variable to write
                     # Assume that all variables have the same temporal dimension size.
                     tval_datetime = num2date(self.i_coords['time'][it], self.i_coords['time'].units , self.i_coords['time'].calendar)
-                    idx = np.abs( par['time_counter'] - self.dateToNemoCalendar(tval_datetime, self.calendar_type) ).argmin()    
-                    log.info('Saving to target in index: ' + str(idx)) 
+                    idx = np.abs( par['time_counter'] - self.dateToNemoCalendar(tval_datetime, self.calendar_type) ).argmin()
+                    log.info('Saving to target in index: ' + str(idx))
                     #
                     # Write
-                    #     
+                    #
                     # ncbdy=netcdf(par['ncname'],'a')
                     if par['dtype']=='2d':
                         ncbdy.variables[par['vars'][iv]][idx,:,:]=data_1[:,:]
@@ -612,11 +610,11 @@ class bdy_create():
                 iv+=1 # next variable in dictionary
         #
         # Close file
-        # 
+        #
         # self.ncdataT.close(); self.ncdataU.close(); self.ncdataV.close()
-        self.ncmask.close() 
+        self.ncmask.close()
         self.nccoord.close()
-        # return 1 
+        # return 1
 
 
 
@@ -624,17 +622,17 @@ def main():
 
     #
     # Ejemplo de como utilizar la clase bdy_create.
-    # 
+    #
     log.getLogger().setLevel(20)
 
-    # 
+    #
     grid2D_nc = MFDataset('/LUSTRE/FORCING/GLORYS2V4/2015/ext-GLORYS2V4_1dAV_*grid2D*.nc')
     gridT_nc = MFDataset('/LUSTRE/FORCING/GLORYS2V4/2015/ext-GLORYS2V4_1dAV_*gridT*.nc')
     gridS_nc = MFDataset('/LUSTRE/FORCING/GLORYS2V4/2015/ext-GLORYS2V4_1dAV_*gridS*.nc')
     gridU_nc = MFDataset('/LUSTRE/FORCING/GLORYS2V4/2015/ext-GLORYS2V4_1dAV_*gridU*.nc')
     gridV_nc = MFDataset('/LUSTRE/FORCING/GLORYS2V4/2015/ext-GLORYS2V4_1dAV_*gridV*.nc')
     meshmask_ncpath = '/LUSTRE/pdamien/MODELES/STOCK/GOLFO12/GOLFO12-I/mesh_mask.nc'
-    bdycoordinates_ncpath = '/LUSTRE/pdamien/MODELES/STOCK/GOLFO12/GOLFO12-I/BDY_GLORYS2V3/coordinates.bdy_GOLFO12.nc'    
+    bdycoordinates_ncpath = '/LUSTRE/pdamien/MODELES/STOCK/GOLFO12/GOLFO12-I/BDY_GLORYS2V3/coordinates.bdy_GOLFO12.nc'
 
     coords = {}
     coords['time'] = grid2D_nc.variables['time_counter']
@@ -660,4 +658,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-     
+
